@@ -9,7 +9,7 @@ Chessboard initializeBoard() {
     Chessboard board(8, std::vector<Piece>(8, Piece()));
 
     // Ustawienie pionków
-    for (int i = 0; i < 8; ++i) {
+    for (int i = 0; i < 8; i++) {
         board[1][i] = Piece('p', 'w'); // Pionki białe
         board[6][i] = Piece('p', 'b'); // Pionki czarne
     }
@@ -55,30 +55,87 @@ void deserializeChessboard(const int data[128], Chessboard& board) {
     }
 }
 
-
-
-bool can_move(Chessboard& board, int move[4]) {
+bool can_pawn_move(const Chessboard& board, const int move[4]) {
     int x1 = move[0];
     int y1 = move[1];
     int x2 = move[2];
     int y2 = move[3];
 
-    // Sprawdzenie, czy współrzędne są w granicach planszy
-    if (x1 < 0 || x1 >= 8 || y1 < 0 || y1 >= 8 || x2 < 0 || x2 >= 8 || y2 < 0 || y2 >= 8) {
-        return false;
+    const Piece& pawn = board[y1][x1];
+
+    // Sprawdzenie koloru pionka
+    if (pawn.color == 'w') { // Biały pionek
+        // Ruch o jedno pole do przodu
+        if (y2 == y1 + 1 && x2 == x1 && board[y2][x2].type == 'e') {
+            return true;
+        }
+        // Ruch o dwa pola do przodu na pierwszym ruchu
+        if (y2 == y1 + 2 && x2 == x1 && y1 == 1 && board[y2][x2].type == 'e' && board[y1 + 1][x1].type == 'e') {
+            return true;
+        }
+        // Bicie na skos
+        if (y2 == y1 + 1 && (x2 == x1 + 1 || x2 == x1 - 1)) {
+            const Piece& target = board[y2][x2];
+            if (target.type != 'e' && target.color == 'b') { // Musi być przeciwnik
+                return true;
+            }
+        }
+    } else if (pawn.color == 'b') { // Czarny pionek
+        // Ruch o jedno pole do przodu
+        if (y2 == y1 - 1 && x2 == x1 && board[y2][x2].type == 'e') {
+            return true;
+        }
+        // Ruch o dwa pola do przodu na pierwszym ruchu
+        if (y2 == y1 - 2 && x2 == x1 && y1 == 6 && board[y2][x2].type == 'e' && board[y1 - 1][x1].type == 'e') {
+            return true;
+        }
+        // Bicie na skos
+        if (y2 == y1 - 1 && (x2 == x1 + 1 || x2 == x1 - 1)) {
+            const Piece& target = board[y2][x2];
+            if (target.type != 'e' && target.color == 'w') { // Musi być przeciwnik
+                return true;
+            }
+        }
     }
+
+    // Jeśli żaden warunek nie został spełniony, ruch jest nielegalny
+    return false;
+}
+
+
+
+bool can_move(Chessboard& board, int move[4]) {
+
+    bool state = false;
+    int x1 = move[0];
+    int y1 = move[1];
+    int x2 = move[2];
+    int y2 = move[3];
+
 
     // Sprawdzenie, czy na pozycji początkowej znajduje się figura
     Piece& sourcePiece = board[y1][x1];
     if (sourcePiece.type == 'e') { // Brak figury (zakładamy, że '\0' oznacza puste pole)
         return false;
     }
+    switch (sourcePiece.type)
+    {
+    case 'p':
+        state = can_pawn_move(board, move);
+        break;
+    
+    default:
+        break;
+    }
 
     // Przeniesienie figury na nowe miejsce
-    Piece& destinationPiece = board[y2][x2];
-    destinationPiece = sourcePiece;   // Kopiowanie figury na nowe miejsce
-    sourcePiece = Piece();            // Oczyszczenie pola początkowego (ustawienie na pusty Piece)
+    if (state){
+        Piece& destinationPiece = board[y2][x2];
+        destinationPiece = sourcePiece;   // Kopiowanie figury na nowe miejsce
+        sourcePiece = Piece();            // Oczyszczenie pola początkowego (ustawienie na pusty Piece)
+    }
 
-    return true;
+
+    return state;
 }
 
