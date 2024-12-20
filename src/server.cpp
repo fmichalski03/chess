@@ -153,7 +153,7 @@ void *gameSessionThread(void *arg) {
 
         printf("Move received: %d %d %d %d\n", msg[0], msg[1], msg[2], msg[3]);
 
-        if (can_move()) {
+        if (can_move(board, msg)) {
             // Aktualizacja planszy i zmiana tury
             if (turn == 'w')
                 turn = 'b';
@@ -161,6 +161,11 @@ void *gameSessionThread(void *arg) {
                 turn = 'w';
 
             // Powiadamianie przeciwnika o ruchu
+            serializeChessboard(board,data);
+
+            send(clientSocketWhite, data, 128 * sizeof(int), 0);
+            send(clientSocketBlack, data, 128 * sizeof(int), 0);
+
             send(otherSocket, &turn, sizeof turn, 0);
             send(currentSocket, &turn, sizeof turn, 0);
         }

@@ -20,6 +20,6 @@ Chessboard initializeBoard();
 std::vector<char> serializeChessboard(const Chessboard& board);
 void serializeChessboard(const Chessboard& board, int data[128]);
 void deserializeChessboard(const int data[128], Chessboard& board);
-bool can_move();
+bool can_move(Chessboard& board, int move[4]);
 
 #endif // CHESSBOARD_H

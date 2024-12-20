@@ -57,7 +57,28 @@ void deserializeChessboard(const int data[128], Chessboard& board) {
 
 
 
-bool can_move(){
+bool can_move(Chessboard& board, int move[4]) {
+    int x1 = move[0];
+    int y1 = move[1];
+    int x2 = move[2];
+    int y2 = move[3];
+
+    // Sprawdzenie, czy współrzędne są w granicach planszy
+    if (x1 < 0 || x1 >= 8 || y1 < 0 || y1 >= 8 || x2 < 0 || x2 >= 8 || y2 < 0 || y2 >= 8) {
+        return false;
+    }
+
+    // Sprawdzenie, czy na pozycji początkowej znajduje się figura
+    Piece& sourcePiece = board[y1][x1];
+    if (sourcePiece.type == 'e') { // Brak figury (zakładamy, że '\0' oznacza puste pole)
+        return false;
+    }
+
+    // Przeniesienie figury na nowe miejsce
+    Piece& destinationPiece = board[y2][x2];
+    destinationPiece = sourcePiece;   // Kopiowanie figury na nowe miejsce
+    sourcePiece = Piece();            // Oczyszczenie pola początkowego (ustawienie na pusty Piece)
+
     return true;
 }
 

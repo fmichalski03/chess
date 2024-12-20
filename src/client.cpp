@@ -18,10 +18,11 @@ void * gameSessionThread(void *arg);
 
 static char side, side_r;
 static int turn;
+static Chessboard board;
 
 int main(int argc, char const *argv[])
 {
-    Chessboard board = initializeBoard();
+    board = initializeBoard();
     
     
     struct sockaddr_in *sa = (sockaddr_in *)malloc(sizeof(sockaddr_in));
@@ -62,7 +63,6 @@ int main(int argc, char const *argv[])
                  window.close();
             
             if( turn == 1){
-                printf("%d", turn);
                 if (event.type == sf::Event::MouseButtonPressed) {
                     if (event.mouseButton.button == sf::Mouse::Left) {
                         clickPos = pixelToGrid(sf::Mouse::getPosition(window));
@@ -75,10 +75,18 @@ int main(int argc, char const *argv[])
                         releasePos = pixelToGrid(sf::Mouse::getPosition(window));
                         printf(" %d %d \n", releasePos.x, releasePos.y);
                         int msg[4];
-                        msg[0] = clickPos.x;
-                        msg[1] = clickPos.y;
-                        msg[2] = releasePos.x;
-                        msg[3] = releasePos.y;
+                        if(side == 'w'){
+                            msg[0] = 7 - clickPos.x;
+                            msg[1] = 7 - clickPos.y;
+                            msg[2] = 7 - releasePos.x;
+                            msg[3] = 7 - releasePos.y;
+                        }
+                        else{
+                            msg[0] = clickPos.x;
+                            msg[1] = clickPos.y;
+                            msg[2] = releasePos.x;
+                            msg[3] = releasePos.y;
+                        }
                         send(*SocketFD, &msg, sizeof msg, 0);
                     }
                 }
@@ -138,16 +146,18 @@ void disconnect(int &SocketFD){
 
 void * gameSessionThread(void *arg){
     int SocketFD = *((int*)(arg));
+    int data[128] = {0};
     while(1){
         memset(&side_r, 0, sizeof side_r);
+        memset(&data, 0, sizeof data);
+        recv(SocketFD, data, 128 * sizeof(int), 0);
+        deserializeChessboard(data, board);
         recv(SocketFD, &side_r, sizeof side_r, 0);
         
         if(side == side_r){
-            printf("%c : %c, moja tura\n", side, side_r);
             turn = 1;
         }
         else{
-            printf("%c : %c, nie moja tura\n", side, side_r);
             turn = 0;
         }
     }
