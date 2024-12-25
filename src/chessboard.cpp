@@ -102,7 +102,63 @@ bool can_pawn_move(const Chessboard& board, const int move[4]) {
     return false;
 }
 
+bool can_bishop_move(const Chessboard& board, const int move[4]) {
+    int x1 = move[0]; // Starting x position
+    int y1 = move[1]; // Starting y position
+    int x2 = move[2]; // Target x position
+    int y2 = move[3]; // Target y position
 
+    const Piece& bishop = board[y1][x1];
+
+    // Check if the move is diagonal
+    if (abs(x2 - x1) != abs(y2 - y1)) {
+        return false; // Not a valid bishop move
+    }
+
+    // Check for obstacles in the path
+    int xDirection = (x2 - x1) > 0 ? 1 : -1; // Determine direction of x movement
+    int yDirection = (y2 - y1) > 0 ? 1 : -1; // Determine direction of y movement
+
+    int x = x1 + xDirection;
+    int y = y1 + yDirection;
+
+    while (x != x2 && y != y2) {
+        if (board[y][x].type != 'e') { // If there's a piece in the way
+            return false; // Move is blocked
+        }
+        x += xDirection;
+        y += yDirection;
+    }
+
+    // Check if the target position has a piece of the same color
+    const Piece& targetPiece = board[y2][x2];
+    if (targetPiece.type != 'e' && targetPiece.color == bishop.color) {
+        return false; // Cannot capture own piece
+    }
+
+    return true; // Valid move
+}
+
+bool can_knight_move(const Chessboard& board, const int move[4]) {
+    int x1 = move[0]; // Starting x position
+    int y1 = move[1]; // Starting y position
+    int x2 = move[2]; // Target x position
+    int y2 = move[3]; // Target y position
+
+    const Piece& knight = board[y1][x1];
+
+    // Check if the move is in an L-shape (2 squares in one direction and 1 square in the other)
+    if ((abs(x2 - x1) == 2 && abs(y2 - y1) == 1) || (abs(x2 - x1) == 1 && abs(y2 - y1) == 2)) {
+        // Check if the target position has a piece of the same color
+        const Piece& targetPiece = board[y2][x2];
+        if (targetPiece.type == 'e' || targetPiece.color != knight.color) {
+            return true; // Valid move (either empty or capturing an opponent's piece)
+        }
+    }
+
+    // If the move is not valid, return false
+    return false;
+}
 
 bool can_move(Chessboard& board, int move[4]) {
 
@@ -123,7 +179,12 @@ bool can_move(Chessboard& board, int move[4]) {
     case 'p':
         state = can_pawn_move(board, move);
         break;
-    
+    case 'b':
+        state = can_bishop_move(board, move);
+        break;
+    case 'k':
+        state = can_knight_move(board, move);
+        break;
     default:
         break;
     }

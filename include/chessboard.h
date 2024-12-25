@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <cstring>
+#include <stdlib.h>
 
 
 // Struktura reprezentująca pionek
