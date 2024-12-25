@@ -153,7 +153,7 @@ void *gameSessionThread(void *arg) {
 
         printf("Move received: %d %d %d %d\n", msg[0], msg[1], msg[2], msg[3]);
 
-        if (can_move(board, msg)) {
+        if (can_move(board, msg, turn)) {
             // Aktualizacja planszy i zmiana tury
             if (turn == 'w')
                 turn = 'b';

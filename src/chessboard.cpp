@@ -160,7 +160,7 @@ bool can_knight_move(const Chessboard& board, const int move[4]) {
     return false;
 }
 
-bool can_move(Chessboard& board, int move[4]) {
+bool can_move(Chessboard& board, int move[4], char turn) {
 
     bool state = false;
     int x1 = move[0];
@@ -168,7 +168,10 @@ bool can_move(Chessboard& board, int move[4]) {
     int x2 = move[2];
     int y2 = move[3];
 
-
+    if (board[y1][x1].color != turn){
+        return false;
+    }
+    
     // Sprawdzenie, czy na pozycji początkowej znajduje się figura
     Piece& sourcePiece = board[y1][x1];
     if (sourcePiece.type == 'e') { // Brak figury (zakładamy, że '\0' oznacza puste pole)
