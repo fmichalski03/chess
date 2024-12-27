@@ -1,7 +1,16 @@
 #include "chessboard.h"
+#include <stdio.h>
 
 // Typ szachownicy
 using Chessboard = std::vector<std::vector<Piece>>;
+
+bool check(Chessboard& board, char turn, int king_pos[2]);
+bool can_pawn_move(Chessboard &board, const int move[4]);
+bool can_knight_move(const Chessboard &board, const int move[4]);
+bool can_bishop_move(const Chessboard &board, const int move[4]);
+bool can_rook_move(const Chessboard &board, const int move[4]);
+bool can_queen_move(const Chessboard &board, const int move[4]);
+bool can_king_move(const Chessboard &board, const int move[4]);
 
 // Funkcja do inicjalizacji szachownicy
 Chessboard initializeBoard()
@@ -62,63 +71,43 @@ void deserializeChessboard(const int data[128], Chessboard &board)
     }
 }
 
-bool can_pawn_move(const Chessboard &board, const int move[4])
-{
-    int x1 = move[0];
-    int y1 = move[1];
-    int x2 = move[2];
-    int y2 = move[3];
+bool can_pawn_move(Chessboard &board, const int move[4]) {
 
-    const Piece &pawn = board[y1][x1];
+    bool state = false;
+    int startX = move[0];
+    int startY = move[1];
+    int targetX = move[2];
+    int targetY = move[3];
 
-    // Sprawdzenie koloru pionka
-    if (pawn.color == 'w')
-    { // Biały pionek
-        // Ruch o jedno pole do przodu
-        if (y2 == y1 + 1 && x2 == x1 && board[y2][x2].type == 'e')
-        {
-            return true;
-        }
-        // Ruch o dwa pola do przodu na pierwszym ruchu
-        if (y2 == y1 + 2 && x2 == x1 && y1 == 1 && board[y2][x2].type == 'e' && board[y1 + 1][x1].type == 'e')
-        {
-            return true;
-        }
-        // Bicie na skos
-        if (y2 == y1 + 1 && (x2 == x1 + 1 || x2 == x1 - 1))
-        {
-            const Piece &target = board[y2][x2];
-            if (target.type != 'e' && target.color == 'b')
-            { // Musi być przeciwnik
-                return true;
-            }
-        }
-    }
-    else if (pawn.color == 'b')
-    { // Czarny pionek
-        // Ruch o jedno pole do przodu
-        if (y2 == y1 - 1 && x2 == x1 && board[y2][x2].type == 'e')
-        {
-            return true;
-        }
-        // Ruch o dwa pola do przodu na pierwszym ruchu
-        if (y2 == y1 - 2 && x2 == x1 && y1 == 6 && board[y2][x2].type == 'e' && board[y1 - 1][x1].type == 'e')
-        {
-            return true;
-        }
-        // Bicie na skos
-        if (y2 == y1 - 1 && (x2 == x1 + 1 || x2 == x1 - 1))
-        {
-            const Piece &target = board[y2][x2];
-            if (target.type != 'e' && target.color == 'w')
-            { // Musi być przeciwnik
-                return true;
-            }
+    const Piece &pawn = board[startY][startX];
+    char pawnColor = pawn.color;
+    int direction = (pawnColor == 'w') ? 1 : -1; // 1 for white, -1 for black
+    int startRow = (pawnColor == 'w') ? 1 : 6; // Starting row for pawns
+
+    // Check for moving forward
+    if (targetY == startY + direction && targetX == startX) {
+        if (board[targetY][targetX].type == 'e') {
+            state = true; // Move one square forward
         }
     }
 
-    // Jeśli żaden warunek nie został spełniony, ruch jest nielegalny
-    return false;
+    // Check for initial double move
+    if (startY == startRow && targetY == startY + 2 * direction && targetX == startX) {
+        if (board[startY + direction][startX].type == 'e' && board[targetY][targetX].type == 'e') {
+            state = true; // Move two squares forward
+        }
+    }
+
+    // Check for capturing
+    if (targetY == startY + direction && (targetX == startX + 1 || targetX == startX - 1)) {
+        const Piece &target = board[targetY][targetX];
+        if (target.type != 'e' && target.color != pawnColor) {
+            state = true; // Capture opponent's piece
+        }
+    }
+
+    // If no conditions are met, the move is illegal
+    return state;
 }
 
 bool can_bishop_move(const Chessboard &board, const int move[4])
@@ -265,6 +254,76 @@ bool can_queen_move(const Chessboard &board, const int move[4])
     return false;
 }
 
+bool check(Chessboard &board, char turn, int king_pos[2]){
+    // Check if the king is in check
+    for (int i = 0; i < 8; i++)
+    {
+        for (int j = 0; j < 8; j++)
+        {
+            if (board[i][j].type != 'e')
+            {
+                if (board[i][j].color == turn){
+                    continue;
+                }
+                int move[4];
+                move[0] = i;
+                move[1] = j;
+                move[2] = king_pos[1];
+                move[3] = king_pos[0];
+                Piece &sourcePiece = board[i][j];
+                bool state = false;
+                switch (sourcePiece.type)
+                    {
+                    case 'p':
+                        state = can_pawn_move(board, move);
+                        break;
+                    case 'b':
+                        state = can_bishop_move(board, move);
+                        break;
+                    case 'k':
+                        state = can_knight_move(board, move);
+                        break;
+                    case 'r':
+                        state = can_rook_move(board, move);
+                        break;
+                    case 'q':
+                        state = can_queen_move(board, move);
+                        break;
+                    case 'K':
+                        state = can_king_move(board, move);
+                        break;
+                    default:
+                        break;
+                    }
+                    if (state)
+                    {
+                        printf("%d %d %d %d", move[0], move[1], move[3], move[2]);
+                        return true;
+                    }
+            }
+        }
+
+    }
+    return false;
+}
+
+void king_position(Chessboard &board, char turn, int king_pos[2]){
+    // Find the king's position
+    for (int i = 0; i < 8; i++)
+    {
+        for (int j = 0; j < 8; j++)
+        {
+            if (board[i][j].type == 'K' && board[i][j].color == turn)
+            {
+                king_pos[0] = j;
+                king_pos[1] = i;
+                return;
+            }
+        }
+    }
+            
+}
+
 bool can_move(Chessboard &board, int move[4], char turn)
 {
 
@@ -280,7 +339,7 @@ bool can_move(Chessboard &board, int move[4], char turn)
     }
 
     // Sprawdzenie, czy na pozycji początkowej znajduje się figura
-    Piece &sourcePiece = board[y1][x1];
+    Piece sourcePiece = board[y1][x1];
     if (sourcePiece.type == 'e')
     { // Brak figury (zakładamy, że '\0' oznacza puste pole)
         return false;
@@ -312,9 +371,16 @@ bool can_move(Chessboard &board, int move[4], char turn)
     // Przeniesienie figury na nowe miejsce
     if (state)
     {
-        Piece &destinationPiece = board[y2][x2];
-        destinationPiece = sourcePiece; // Kopiowanie figury na nowe miejsce
-        sourcePiece = Piece();          // Oczyszczenie pola początkowego (ustawienie na pusty Piece)
+        Piece destinationPiece = board[y2][x2];
+        board[y2][x2] = sourcePiece; // Kopiowanie figury na nowe miejsce
+        board[y1][x1] = Piece();          // Oczyszczenie pola początkowego (ustawienie na pusty Piece)
+        int king_pos[2] = {0};
+        king_position(board, turn, king_pos);
+        if(check(board, turn, king_pos)){
+            board[y2][x2] = destinationPiece;
+            board[y1][x1] = sourcePiece;
+            return false;
+        }
     }
 
     return state;
