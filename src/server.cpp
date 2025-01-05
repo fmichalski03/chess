@@ -156,17 +156,27 @@ void *gameSessionThread(void *arg) {
 
             }
             if(n == 0){
+                flags = fcntl(otherSocket, F_GETFL, 0);
+                fcntl(otherSocket, F_SETFL, flags & ~O_NONBLOCK);
+                fcntl(currentSocket, F_SETFL, flags & ~O_NONBLOCK);
                 printf("Client disconnected! Ending session.\n");
                 turn = 'e';
                 send(otherSocket, &turn, sizeof turn, 0);
-                break;
+                close(clientSocketWhite);
+                close(clientSocketBlack);
+                pthread_exit(NULL);
             }
             n = recv(currentSocket, &msg, sizeof msg, 0);
             recv(otherSocket, &msg_e, sizeof msg_e, 0);
             if(msg_e[0] == -1){
+                flags = fcntl(otherSocket, F_GETFL, 0);
+                fcntl(otherSocket, F_SETFL, flags & ~O_NONBLOCK);
+                fcntl(currentSocket, F_SETFL, flags & ~O_NONBLOCK);
                 turn = 'e';
                 send(currentSocket, &turn, sizeof turn, 0);
-                break;
+                close(clientSocketWhite);
+                close(clientSocketBlack);
+                pthread_exit(NULL);
             }
         }
         
@@ -185,11 +195,19 @@ void *gameSessionThread(void *arg) {
         }
 
         if (can_move(board, msg, turn)) {
-            // Aktualizacja planszy i zmiana tury
+
             if (turn == 'w')
                 turn = 'b';
             else
                 turn = 'w';
+            if(check_mate(board, turn)){
+                printf("Player %c is in checkmate!\n", turn);
+
+            }
+            if(stale_mate(board, turn)){
+                printf("Player %c is in stalemate!\n", turn);
+            }
+            
 
             // Powiadamianie przeciwnika o ruchu
             serializeChessboard(board,data);

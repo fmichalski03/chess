@@ -324,6 +324,79 @@ void king_position(Chessboard &board, char turn, int king_pos[2]){
             
 }
 
+bool check_mate(Chessboard &board, char turn) {
+    int king_pos[2];
+    king_position(board, turn, king_pos);
+
+    // Check if the king is in check
+    if (!check(board, turn, king_pos)) {
+        return false; // Not in check, so not checkmate
+    }
+
+    // Iterate through all pieces to see if any can block or capture the attacking piece
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            if (board[i][j].color == turn) {
+                // Try all possible moves for this piece
+                for (int x = 0; x < 8; x++) {
+                    for (int y = 0; y < 8; y++) {
+                        int move[4] = {j, i, y, x}; // {startX, startY, targetX, targetY}
+                        if (can_move(board, move, turn)) {
+                            // Simulate the move
+                            Chessboard tempBoard = board;
+                            Piece destinationPiece = tempBoard[y][x];
+                            tempBoard[y][x] = tempBoard[i][j];
+                            tempBoard[i][j] = Piece();
+
+                            // Check if the king is still in check after the move
+                            int tempKingPos[2];
+                            king_position(tempBoard, turn, tempKingPos);
+                            if (!check(tempBoard, turn, tempKingPos)) {
+                                return false; // Found a move that gets the king out of check
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // If no moves can get the king out of check, it's checkmate
+    return true;
+}
+
+bool stale_mate(Chessboard &board, char turn) {
+    int king_pos[2];
+    king_position(board, turn, king_pos);
+
+    // Check if the king is in check
+    if (check(board, turn, king_pos)) {
+        return false; // If the king is in check, it's not a stalemate
+    }
+    Chessboard tempBoard = board;
+
+    // Iterate through all pieces to see if any can make a legal move
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            if (board[i][j].color == turn) {
+                // Try all possible moves for this piece
+                for (int x = 0; x < 8; x++) {
+                    for (int y = 0; y < 8; y++) {
+                        int move[4] = {j, i, y, x}; // {startX, startY, targetX, targetY}
+                        if (can_move(tempBoard, move, turn)) {
+                            // If any legal move is found, it's not a stalemate
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // If no legal moves are found and the king is not in check, it's a stalemate
+    return true;
+}
+
 bool can_move(Chessboard &board, int move[4], char turn)
 {
 
