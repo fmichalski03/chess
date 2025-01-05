@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <errno.h>
 
 #include <SFML/Network.hpp>
 #include "chessboard.h"
@@ -138,7 +139,7 @@ void *gameSessionThread(void *arg) {
     send(clientSocketWhite, data, 128 * sizeof(int), 0);
     send(clientSocketBlack, data, 128 * sizeof(int), 0);
 
-
+    int msg_e[4];
     int msg[4];
     while (1) {
         int currentSocket = (turn == 'w') ? clientSocketWhite : clientSocketBlack;
@@ -146,12 +147,42 @@ void *gameSessionThread(void *arg) {
 
         // Odbieranie wiadomości od aktualnego gracza
         memset(msg, 0, sizeof msg);
-        if (recv(currentSocket, &msg, sizeof msg, 0) <= 0) {
-            printf("Client disconnected! Ending session.\n");
-            break;
+        int flags = fcntl(otherSocket, F_GETFL, 0);
+        fcntl(otherSocket, F_SETFL, flags | O_NONBLOCK);
+        fcntl(currentSocket, F_SETFL, flags | O_NONBLOCK);
+        int n = recv(currentSocket, &msg, sizeof msg, 0);
+        while (n <= 0) {
+            if (errno == EWOULDBLOCK || errno == EAGAIN) {
+
+            }
+            if(n == 0){
+                printf("Client disconnected! Ending session.\n");
+                turn = 'e';
+                send(otherSocket, &turn, sizeof turn, 0);
+                break;
+            }
+            n = recv(currentSocket, &msg, sizeof msg, 0);
+            recv(otherSocket, &msg_e, sizeof msg_e, 0);
+            if(msg_e[0] == -1){
+                turn = 'e';
+                send(currentSocket, &turn, sizeof turn, 0);
+                break;
+            }
         }
+        
+        flags = fcntl(otherSocket, F_GETFL, 0);
+        fcntl(otherSocket, F_SETFL, flags & ~O_NONBLOCK);
+        fcntl(currentSocket, F_SETFL, flags & ~O_NONBLOCK);
+
 
         printf("Move received: %d %d %d %d\n", msg[0], msg[1], msg[2], msg[3]);
+
+        if(msg[0] == -1){
+            printf("Client disconnected! Ending session.\n");
+            turn = 'e';
+            send(otherSocket, &turn, sizeof turn, 0);
+            break;
+        }
 
         if (can_move(board, msg, turn)) {
             // Aktualizacja planszy i zmiana tury
@@ -163,11 +194,11 @@ void *gameSessionThread(void *arg) {
             // Powiadamianie przeciwnika o ruchu
             serializeChessboard(board,data);
 
-            send(clientSocketWhite, data, 128 * sizeof(int), 0);
-            send(clientSocketBlack, data, 128 * sizeof(int), 0);
-
             send(otherSocket, &turn, sizeof turn, 0);
             send(currentSocket, &turn, sizeof turn, 0);
+
+            send(clientSocketWhite, data, 128 * sizeof(int), 0);
+            send(clientSocketBlack, data, 128 * sizeof(int), 0);
         }
     }
 

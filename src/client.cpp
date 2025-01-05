@@ -59,8 +59,25 @@ int main(int argc, char const *argv[])
         window_display(window,pieceTexture, chessboardTexture, board, side);
         while( window.pollEvent( event ) )
         {
-            if( event.type == sf::Event::Closed )
-                 window.close();
+            if( event.type == sf::Event::Closed)
+            {
+                if(turn != 1){
+                    int msg[4];
+                    msg[0] = -1;
+                    msg[1] = -1;
+                    msg[2] = -1;
+                    msg[3] = -1;
+                    printf("Msg send %d %d %d %d", msg[0], msg[1], msg[2], msg[3]);
+                    send(*SocketFD, &msg, sizeof msg, 0);
+                }
+                window.close();
+                break;
+            }
+
+            else if(turn == -1){
+                window.close();
+                break;
+            }
             
             if( turn == 1){
                 if (event.type == sf::Event::MouseButtonPressed) {
@@ -150,16 +167,19 @@ void * gameSessionThread(void *arg){
     while(1){
         memset(&side_r, 0, sizeof side_r);
         memset(&data, 0, sizeof data);
-        recv(SocketFD, data, 128 * sizeof(int), 0);
-        deserializeChessboard(data, board);
         recv(SocketFD, &side_r, sizeof side_r, 0);
-        
-        if(side == side_r){
+        if(side_r == 'e'){
+            turn = -1;
+            pthread_exit(NULL);
+        }
+        else if(side == side_r){
             turn = 1;
         }
         else{
             turn = 0;
         }
+        recv(SocketFD, data, 128 * sizeof(int), 0);
+        deserializeChessboard(data, board);
     }
     pthread_exit(NULL);
 }
