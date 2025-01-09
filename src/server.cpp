@@ -117,9 +117,9 @@ void *gameSessionThread(void *arg) {
     int clientSocketBlack = session->clientSocketBlack;
     free(session);
 
-    char turn = 'w'; // Białe zaczynają
+    char turn = 'w'; // White starts
 
-    // Wysyłanie początkowej wiadomości do obu klientów
+    // Send initial messages to both clients
     char whiteMsg = 'w', blackMsg = 'b';
     if (send(clientSocketWhite, &whiteMsg, sizeof(char), 0) <= 0 ||
         send(clientSocketBlack, &blackMsg, sizeof(char), 0) <= 0) {
@@ -129,99 +129,90 @@ void *gameSessionThread(void *arg) {
         pthread_exit(NULL);
     }
 
-    // Serializacja planszy i wysłanie do obu klientów
-
-    int data[128];// Wyzerowanie bufora
+    // Serialize the board and send it to both clients
+    int data[128];
     memset(data, 0, sizeof(data));
-
-
-    serializeChessboard(board,data);
-    
+    serializeChessboard(board, data);
     send(clientSocketWhite, data, 128 * sizeof(int), 0);
     send(clientSocketBlack, data, 128 * sizeof(int), 0);
 
-    int msg_e[4];
     int msg[4];
+    fd_set read_fds;
+    int max_fd = (clientSocketWhite > clientSocketBlack) ? clientSocketWhite : clientSocketBlack;
+
     while (1) {
-        int currentSocket = (turn == 'w') ? clientSocketWhite : clientSocketBlack;
-        int otherSocket = (turn == 'w') ? clientSocketBlack : clientSocketWhite;
+        FD_ZERO(&read_fds);
+        FD_SET(clientSocketWhite, &read_fds);
+        FD_SET(clientSocketBlack, &read_fds);
 
-        // Odbieranie wiadomości od aktualnego gracza
-        memset(msg, 0, sizeof msg);
-        int flags = fcntl(otherSocket, F_GETFL, 0);
-        fcntl(otherSocket, F_SETFL, flags | O_NONBLOCK);
-        fcntl(currentSocket, F_SETFL, flags | O_NONBLOCK);
-        int n = recv(currentSocket, &msg, sizeof msg, 0);
-        while (n <= 0) {
-            if (errno == EWOULDBLOCK || errno == EAGAIN) {
-
-            }
-            if(n == 0){
-                flags = fcntl(otherSocket, F_GETFL, 0);
-                fcntl(otherSocket, F_SETFL, flags & ~O_NONBLOCK);
-                fcntl(currentSocket, F_SETFL, flags & ~O_NONBLOCK);
-                printf("Client disconnected! Ending session.\n");
-                turn = 'e';
-                send(otherSocket, &turn, sizeof turn, 0);
-                close(clientSocketWhite);
-                close(clientSocketBlack);
-                pthread_exit(NULL);
-            }
-            n = recv(currentSocket, &msg, sizeof msg, 0);
-            recv(otherSocket, &msg_e, sizeof msg_e, 0);
-            if(msg_e[0] == -1){
-                flags = fcntl(otherSocket, F_GETFL, 0);
-                fcntl(otherSocket, F_SETFL, flags & ~O_NONBLOCK);
-                fcntl(currentSocket, F_SETFL, flags & ~O_NONBLOCK);
-                turn = 'e';
-                send(currentSocket, &turn, sizeof turn, 0);
-                close(clientSocketWhite);
-                close(clientSocketBlack);
-                pthread_exit(NULL);
-            }
-        }
-        
-        flags = fcntl(otherSocket, F_GETFL, 0);
-        fcntl(otherSocket, F_SETFL, flags & ~O_NONBLOCK);
-        fcntl(currentSocket, F_SETFL, flags & ~O_NONBLOCK);
-
-
-        printf("Move received: %d %d %d %d\n", msg[0], msg[1], msg[2], msg[3]);
-
-        if(msg[0] == -1){
-            printf("Client disconnected! Ending session.\n");
-            turn = 'e';
-            send(otherSocket, &turn, sizeof turn, 0);
+        // Use select() to monitor both sockets for activity
+        int activity = select(max_fd + 1, &read_fds, NULL, NULL, NULL);
+        if (activity < 0) {
+            perror("Select error");
             break;
         }
 
-        if (can_move(board, msg, turn)) {
-
-            if (turn == 'w')
-                turn = 'b';
-            else
-                turn = 'w';
-            if(check_mate(board, turn)){
-                printf("Player %c is in checkmate!\n", turn);
-
+        // Check if either client has disconnected
+        if (FD_ISSET(clientSocketWhite, &read_fds)) {
+            memset(msg, 0, sizeof(msg));
+            int n = recv(clientSocketWhite, &msg, sizeof(msg), 0);
+            if (n <= 0) {
+                printf("White client disconnected! Ending session.\n");
+                turn = 'e';
+                send(clientSocketBlack, &turn, sizeof(turn), 0); // Notify Black client
+                break;
             }
-            if(stale_mate(board, turn)){
-                printf("Player %c is in stalemate!\n", turn);
+        }
+
+        if (FD_ISSET(clientSocketBlack, &read_fds)) {
+            memset(msg, 0, sizeof(msg));
+            int n = recv(clientSocketBlack, &msg, sizeof(msg), 0);
+            if (n <= 0) {
+                printf("Black client disconnected! Ending session.\n");
+                turn = 'e';
+                send(clientSocketWhite, &turn, sizeof(turn), 0); // Notify White client
+                break;
             }
-            
+        }
 
-            // Powiadamianie przeciwnika o ruchu
-            serializeChessboard(board,data);
+        // Process the move if it's the correct player's turn
+        int currentSocket = (turn == 'w') ? clientSocketWhite : clientSocketBlack;
+        if (FD_ISSET(currentSocket, &read_fds)) {
+            printf("Move received: %d %d %d %d\n", msg[0], msg[1], msg[2], msg[3]);
 
-            send(otherSocket, &turn, sizeof turn, 0);
-            send(currentSocket, &turn, sizeof turn, 0);
+            if (msg[0] == -1) {
+                printf("Client disconnected! Ending session.\n");
+                turn = 'e';
+                send((turn == 'w') ? clientSocketBlack : clientSocketWhite, &turn, sizeof(turn), 0);
+                break;
+            }
 
-            send(clientSocketWhite, data, 128 * sizeof(int), 0);
-            send(clientSocketBlack, data, 128 * sizeof(int), 0);
+            if (can_move(board, msg, turn)) {
+                if (turn == 'w')
+                    turn = 'b';
+                else
+                    turn = 'w';
+
+                if (check_mate(board, turn)) {
+                    printf("Player %c is in checkmate!\n", turn);
+                }
+                if (stale_mate(board, turn)) {
+                    printf("Player %c is in stalemate!\n", turn);
+                }
+
+                // Notify the other player about the move
+                serializeChessboard(board, data);
+                send(clientSocketWhite, &turn, sizeof(turn), 0);
+                send(clientSocketBlack, &turn, sizeof(turn), 0);
+                send(clientSocketWhite, data, 128 * sizeof(int), 0);
+                send(clientSocketBlack, data, 128 * sizeof(int), 0);
+            }
         }
     }
 
+    // Clean up resources
     close(clientSocketWhite);
     close(clientSocketBlack);
+    printf("Game session ended.\n");
     pthread_exit(NULL);
 }

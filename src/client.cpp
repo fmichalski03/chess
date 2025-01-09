@@ -53,66 +53,53 @@ int main(int argc, char const *argv[])
 
     deserializeChessboard(data, board);
 
-    while (window.isOpen())
-    {
+    while (window.isOpen()) {
         sf::Event event;
-        window_display(window,pieceTexture, chessboardTexture, board, side);
-        while( window.pollEvent( event ) )
-        {
-            if( event.type == sf::Event::Closed)
-            {
-                if(turn != 1){
-                    int msg[4];
-                    msg[0] = -1;
-                    msg[1] = -1;
-                    msg[2] = -1;
-                    msg[3] = -1;
-                    printf("Msg send %d %d %d %d", msg[0], msg[1], msg[2], msg[3]);
-                    send(*SocketFD, &msg, sizeof msg, 0); 
+        window_display(window, pieceTexture, chessboardTexture, board, side);
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed) {
+                if (turn != 1) {
+                    int msg[4] = {-1, -1, -1, -1}; // Disconnection message
+                    send(*SocketFD, &msg, sizeof msg, 0); // Notify server
                 }
-                w_open = 0;
+                w_open = 0; // Close the window
                 window.close();
+                break;
+            } else if (turn == -1) {
+                // Server disconnected or game ended
+                window.close();
+                w_open = 0;
                 break;
             }
 
-            else if(turn == -1){
-                window.close();
-                w_open = 0;
-                break;
-            }
-            
-            if( turn == 1){
+            if (turn == 1) {
+                // Handle player moves (existing code)
                 if (event.type == sf::Event::MouseButtonPressed) {
                     if (event.mouseButton.button == sf::Mouse::Left) {
                         clickPos = pixelToGrid(sf::Mouse::getPosition(window));
-                        printf("%d %d", clickPos.x, clickPos.y);
                     }
                 }
                 if (event.type == sf::Event::MouseButtonReleased) {
                     if (event.mouseButton.button == sf::Mouse::Left) {
-
                         releasePos = pixelToGrid(sf::Mouse::getPosition(window));
-                        printf(" %d %d \n", releasePos.x, releasePos.y);
                         int msg[4];
-                        if(side == 'w'){
+                        if (side == 'w') {
                             msg[0] = 7 - clickPos.x;
                             msg[1] = 7 - clickPos.y;
                             msg[2] = 7 - releasePos.x;
                             msg[3] = 7 - releasePos.y;
-                        }
-                        else{
+                        } else {
                             msg[0] = clickPos.x;
                             msg[1] = clickPos.y;
                             msg[2] = releasePos.x;
                             msg[3] = releasePos.y;
                         }
-                        send(*SocketFD, &msg, sizeof msg, 0);
+                        send(*SocketFD, &msg, sizeof msg, 0); // Send move to server
                     }
                 }
             }
-           
         }
-        window_display(window,pieceTexture, chessboardTexture, board, side);
+        window_display(window, pieceTexture, chessboardTexture, board, side);
     }
 
 
@@ -163,26 +150,46 @@ void disconnect(int &SocketFD){
     close(SocketFD);
 }
 
-void * gameSessionThread(void *arg){
-    int SocketFD = *((int*)(arg));
+void *gameSessionThread(void *arg) {
+    int SocketFD = *((int *)(arg));
     int data[128] = {0};
-    while(w_open){
+    while (w_open) {
         memset(&side_r, 0, sizeof side_r);
         memset(&data, 0, sizeof data);
-        recv(SocketFD, &side_r, sizeof side_r, 0);
-        if(side_r == 'e'){
-            turn = -1;
+        int n = recv(SocketFD, &side_r, sizeof side_r, 0);
+                if (n <= 0) {
+            // Server disconnected
+            printf("Server disconnected! Exiting...\n");
+            turn = -1; // Set turn to -1 to indicate disconnection
+            w_open = 0; // Close the window
             pthread_exit(NULL);
         }
-        else if(side == side_r){
-            turn = 1;
+
+        if (side_r == 'e') {
+            // Server signaled end of session
+            printf("Game session ended by server.\n");
+            turn = -1;
+            w_open = 0; // Close the window
+            pthread_exit(NULL);
+        } else if (side == side_r) {
+            turn = 1; // It's this client's turn
+        } else {
+            turn = 0; // It's the other client's turn
         }
-        else{
-            turn = 0;
+
+        // Receive updated board state
+        n = recv(SocketFD, data, 128 * sizeof(int), 0);
+        if (n <= 0) {
+            // Server disconnected
+            printf("Server disconnected! Exiting...\n");
+            turn = -1;
+            w_open = 0; // Close the window
+            pthread_exit(NULL);
         }
-        recv(SocketFD, data, 128 * sizeof(int), 0);
-        deserializeChessboard(data, board);
+
+        deserializeChessboard(data, board); // Update the board
     }
-    close(SocketFD);
-    pthread_exit(NULL);
+
+    close(SocketFD); // Close the socket
+    pthread_exit(NULL); // Exit the thread
 }
