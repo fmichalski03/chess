@@ -64,6 +64,7 @@ int main(void) {
 
 
     while (1) {
+        memset(&clientAddr, 0, sizeof(clientAddr));
         addr_size = sizeof(clientAddr);
 
         // Przyjmowanie połączenia dla pierwszego gracza
@@ -73,7 +74,7 @@ int main(void) {
             continue;
         }
         printf("Client connected as White.\n");
-
+        memset(&clientAddr, 0, sizeof(clientAddr));
         // Przyjmowanie połączenia dla drugiego gracza
         int clientSocketBlack = accept(serverSocket, (struct sockaddr *)&clientAddr, &addr_size);
         if (clientSocketBlack < 0) {

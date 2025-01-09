@@ -28,15 +28,15 @@ Chessboard initializeBoard()
     board[0][0] = board[0][7] = Piece('r', 'w');
     board[0][1] = board[0][6] = Piece('k', 'w');
     board[0][2] = board[0][5] = Piece('b', 'w');
-    board[0][3] = Piece('q', 'w');
-    board[0][4] = Piece('K', 'w');
+    board[0][3] = Piece('K', 'w');
+    board[0][4] = Piece('q', 'w');
 
     // Czarne figury
     board[7][0] = board[7][7] = Piece('r', 'b');
     board[7][1] = board[7][6] = Piece('k', 'b');
     board[7][2] = board[7][5] = Piece('b', 'b');
-    board[7][3] = Piece('q', 'b');
-    board[7][4] = Piece('K', 'b');
+    board[7][3] = Piece('K', 'b');
+    board[7][4] = Piece('q', 'b');
 
     return board;
 }

@@ -18,13 +18,13 @@ void * gameSessionThread(void *arg);
 
 static char side, side_r;
 static int turn;
+static int w_open;
 static Chessboard board;
 
 int main(int argc, char const *argv[])
 {
     board = initializeBoard();
-    
-    
+    w_open = 1;
     struct sockaddr_in *sa = (sockaddr_in *)malloc(sizeof(sockaddr_in));
     int *SocketFD = (int *)malloc(sizeof(int));
 
@@ -68,14 +68,16 @@ int main(int argc, char const *argv[])
                     msg[2] = -1;
                     msg[3] = -1;
                     printf("Msg send %d %d %d %d", msg[0], msg[1], msg[2], msg[3]);
-                    send(*SocketFD, &msg, sizeof msg, 0);
+                    send(*SocketFD, &msg, sizeof msg, 0); 
                 }
+                w_open = 0;
                 window.close();
                 break;
             }
 
             else if(turn == -1){
                 window.close();
+                w_open = 0;
                 break;
             }
             
@@ -164,7 +166,7 @@ void disconnect(int &SocketFD){
 void * gameSessionThread(void *arg){
     int SocketFD = *((int*)(arg));
     int data[128] = {0};
-    while(1){
+    while(w_open){
         memset(&side_r, 0, sizeof side_r);
         memset(&data, 0, sizeof data);
         recv(SocketFD, &side_r, sizeof side_r, 0);
@@ -181,5 +183,6 @@ void * gameSessionThread(void *arg){
         recv(SocketFD, data, 128 * sizeof(int), 0);
         deserializeChessboard(data, board);
     }
+    close(SocketFD);
     pthread_exit(NULL);
 }
