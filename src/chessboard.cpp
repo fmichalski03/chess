@@ -72,7 +72,6 @@ void deserializeChessboard(const int data[128], Chessboard &board)
 }
 
 bool can_pawn_move(Chessboard &board, const int move[4]) {
-
     bool state = false;
     int startX = move[0];
     int startY = move[1];
@@ -106,7 +105,6 @@ bool can_pawn_move(Chessboard &board, const int move[4]) {
         }
     }
 
-    // If no conditions are met, the move is illegal
     return state;
 }
 
@@ -254,59 +252,6 @@ bool can_queen_move(const Chessboard &board, const int move[4])
     return false;
 }
 
-bool check(Chessboard &board, char turn, int king_pos[2]){
-    // Check if the king is in check
-    for (int i = 0; i < 8; i++)
-    {
-        for (int j = 0; j < 8; j++)
-        {
-            if (board[i][j].type != 'e')
-            {
-                if (board[i][j].color == turn){
-                    continue;
-                }
-                int move[4];
-                move[0] = i;
-                move[1] = j;
-                move[2] = king_pos[1];
-                move[3] = king_pos[0];
-                Piece &sourcePiece = board[i][j];
-                bool state = false;
-                switch (sourcePiece.type)
-                    {
-                    case 'p':
-                        state = can_pawn_move(board, move);
-                        break;
-                    case 'b':
-                        state = can_bishop_move(board, move);
-                        break;
-                    case 'k':
-                        state = can_knight_move(board, move);
-                        break;
-                    case 'r':
-                        state = can_rook_move(board, move);
-                        break;
-                    case 'q':
-                        state = can_queen_move(board, move);
-                        break;
-                    case 'K':
-                        state = can_king_move(board, move);
-                        break;
-                    default:
-                        break;
-                    }
-                    if (state)
-                    {
-                        printf("%d %d %d %d", move[0], move[1], move[3], move[2]);
-                        return true;
-                    }
-            }
-        }
-
-    }
-    return false;
-}
-
 void king_position(Chessboard &board, char turn, int king_pos[2]){
     // Find the king's position
     for (int i = 0; i < 8; i++)
@@ -315,13 +260,45 @@ void king_position(Chessboard &board, char turn, int king_pos[2]){
         {
             if (board[i][j].type == 'K' && board[i][j].color == turn)
             {
-                king_pos[0] = j;
-                king_pos[1] = i;
+                king_pos[0] = i;
+                king_pos[1] = j;
                 return;
             }
         }
     }
             
+}
+
+bool check(Chessboard &board, char turn, int king_pos[2]) {
+    // Iterate through the board to find if any opponent's piece can attack the king
+    for (int row = 0; row < 8; row++) {
+        for (int col = 0; col < 8; col++) {
+            if (board[row][col].type != 'e' && board[row][col].color != turn) {
+                // Create a move array representing the potential attack on the king
+                int move[4] = {col, row, king_pos[1], king_pos[0]}; // (x1, y1, x2, y2)
+
+                // Check if the piece can move to the king's position
+                bool canAttack = false;
+                switch (board[row][col].type) {
+                    case 'p': canAttack = can_pawn_move(board, move); break;
+                    case 'k': canAttack = can_knight_move(board, move); break;
+                    case 'b': canAttack = can_bishop_move(board, move); break;
+                    case 'r': canAttack = can_rook_move(board, move); break;
+                    case 'q': canAttack = can_queen_move(board, move); break;
+                    case 'K': canAttack = can_king_move(board, move); break;
+                    default: break;
+                }
+
+                // If any piece can attack the king, return true (king is in check)
+                if (canAttack) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    // If no piece can attack the king, return false (king is not in check)
+    return false;
 }
 
 bool check_mate(Chessboard &board, char turn) {
@@ -449,6 +426,11 @@ bool can_move(Chessboard &board, int move[4], char turn)
         board[y1][x1] = Piece();          // Oczyszczenie pola początkowego (ustawienie na pusty Piece)
         int king_pos[2] = {0};
         king_position(board, turn, king_pos);
+        // Check if the pawn has reached the last row
+        if ((board[y2][x2].type == 'p')&&((board[y2][x2].color == 'w' && y2 == 7) || (board[y2][x2].color == 'b' && y2 == 0))) {
+            // Promote the pawn to a queen
+            board[y2][x2].type='q';
+        }
         if(check(board, turn, king_pos)){
             board[y2][x2] = destinationPiece;
             board[y1][x1] = sourcePiece;

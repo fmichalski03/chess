@@ -195,9 +195,28 @@ void *gameSessionThread(void *arg) {
 
                 if (check_mate(board, turn)) {
                     printf("Player %c is in checkmate!\n", turn);
-                }
-                if (stale_mate(board, turn)) {
+                    turn = 'c'; // Send checkmate signal
+                    serializeChessboard(board, data);
+                    send(clientSocketWhite, &turn, sizeof(turn), 0);
+                    send(clientSocketBlack, &turn, sizeof(turn), 0);
+                    send(clientSocketWhite, data, 128 * sizeof(int), 0);
+                    send(clientSocketBlack, data, 128 * sizeof(int), 0);
+                    close(clientSocketWhite);
+                    close(clientSocketBlack);
+                    printf("Game session ended.\n");
+                    pthread_exit(NULL);
+                } else if (stale_mate(board, turn)) {
                     printf("Player %c is in stalemate!\n", turn);
+                    turn = 's'; // Send stalemate signal
+                    serializeChessboard(board, data);
+                    send(clientSocketWhite, &turn, sizeof(turn), 0);
+                    send(clientSocketBlack, &turn, sizeof(turn), 0);
+                    send(clientSocketWhite, data, 128 * sizeof(int), 0);
+                    send(clientSocketBlack, data, 128 * sizeof(int), 0);
+                    close(clientSocketWhite);
+                    close(clientSocketBlack);
+                    printf("Game session ended.\n");
+                    pthread_exit(NULL);
                 }
 
                 // Notify the other player about the move

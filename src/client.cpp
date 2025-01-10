@@ -157,7 +157,7 @@ void *gameSessionThread(void *arg) {
         memset(&side_r, 0, sizeof side_r);
         memset(&data, 0, sizeof data);
         int n = recv(SocketFD, &side_r, sizeof side_r, 0);
-                if (n <= 0) {
+        if (n <= 0) {
             // Server disconnected
             printf("Server disconnected! Exiting...\n");
             turn = -1; // Set turn to -1 to indicate disconnection
@@ -171,6 +171,14 @@ void *gameSessionThread(void *arg) {
             turn = -1;
             w_open = 0; // Close the window
             pthread_exit(NULL);
+        } else if (side_r == 'c') {
+            // Checkmate signal
+            printf("Checkmate!\n");
+            w_open = 0; // Close the window
+        } else if (side_r == 's') {
+            // Stalemate signal
+            printf("Stalemate!\n");
+            w_open = 0; // Close the window
         } else if (side == side_r) {
             turn = 1; // It's this client's turn
         } else {
