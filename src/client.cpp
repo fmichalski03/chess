@@ -12,36 +12,38 @@
 
 #include "interface.h"
 
+// Function declarations
 int connect_to_server(struct sockaddr_in sa, int *SocketFD, char& side);
 void disconnect(int &SocketFD);
 void * gameSessionThread(void *arg);
 
-static char side, side_r;
-static int turn;
-static int w_open;
-static Chessboard board;
+// Global variables to manage game state
+static char side, side_r; // Player's side ('w' for white, 'b' for black) and received turn
+static int turn; // Current player's turn (1 if player's turn, 0 otherwise)
+static int w_open; // Window open status
+static Chessboard board; // Game board instance
 
 int main(int argc, char const *argv[])
 {
-    board = initializeBoard();
-    w_open = 1;
+    board = initializeBoard(); // Initialize the chessboard
+    w_open = 1; // Mark the window as open
     struct sockaddr_in *sa = (sockaddr_in *)malloc(sizeof(sockaddr_in));
     int *SocketFD = (int *)malloc(sizeof(int));
 
-    sf::Texture chessboardTexture;
-    std::map<std::string, sf::Texture> pieceTexture;
+    sf::Texture chessboardTexture; // Chessboard texture
+    std::map<std::string, sf::Texture> pieceTexture; // Textures for chess pieces
     sf::RenderWindow window;
-    window_init(window);
-    load_pieces(pieceTexture, chessboardTexture);
+    window_init(window); // Initialize the SFML window
+    load_pieces(pieceTexture, chessboardTexture); // Load chess piece textures
 
-    sf::Vector2i clickPos(-1, -1);
-    sf::Vector2i releasePos(-1, -1);
+    sf::Vector2i clickPos(-1, -1); // Position of mouse click
+    sf::Vector2i releasePos(-1, -1); // Position of mouse release
 
-    turn = connect_to_server(*sa, SocketFD, side);
+    turn = connect_to_server(*sa, SocketFD, side); // Connect to the server and determine player's side
     pthread_t thread_id;
-    pthread_create(&thread_id, 0, gameSessionThread, SocketFD);
+    pthread_create(&thread_id, 0, gameSessionThread, SocketFD); // Start a thread for managing game state
 
-    // Deserializacja danych do planszy
+    // Deserialize the initial board state
     int data[128] = {0};
     int bytesReceived = recv(*SocketFD, data, 128 * sizeof(int), 0);
     if (bytesReceived < 0) {
@@ -50,14 +52,14 @@ int main(int argc, char const *argv[])
         printf("Partial data received: %d bytes\n", bytesReceived);
     }
 
-
-    deserializeChessboard(data, board);
+    deserializeChessboard(data, board); // Load board state from received data
 
     while (window.isOpen()) {
         sf::Event event;
-        window_display(window, pieceTexture, chessboardTexture, board, side);
+        window_display(window, pieceTexture, chessboardTexture, board, side); // Display the game state
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed) {
+                // Handle window close event
                 if (turn != 1) {
                     int msg[4] = {-1, -1, -1, -1}; // Disconnection message
                     send(*SocketFD, &msg, sizeof msg, 0); // Notify server
@@ -66,22 +68,22 @@ int main(int argc, char const *argv[])
                 window.close();
                 break;
             } else if (turn == -1) {
-                // Server disconnected or game ended
+                // Handle server disconnection or game end
                 window.close();
                 w_open = 0;
                 break;
             }
 
             if (turn == 1) {
-                // Handle player moves (existing code)
+                // Handle player's move
                 if (event.type == sf::Event::MouseButtonPressed) {
                     if (event.mouseButton.button == sf::Mouse::Left) {
-                        clickPos = pixelToGrid(sf::Mouse::getPosition(window));
+                        clickPos = pixelToGrid(sf::Mouse::getPosition(window)); // Record mouse click position
                     }
                 }
                 if (event.type == sf::Event::MouseButtonReleased) {
                     if (event.mouseButton.button == sf::Mouse::Left) {
-                        releasePos = pixelToGrid(sf::Mouse::getPosition(window));
+                        releasePos = pixelToGrid(sf::Mouse::getPosition(window)); // Record mouse release position
                         int msg[4];
                         if (side == 'w') {
                             msg[0] = 7 - clickPos.x;
@@ -99,20 +101,19 @@ int main(int argc, char const *argv[])
                 }
             }
         }
-        window_display(window, pieceTexture, chessboardTexture, board, side);
+        window_display(window, pieceTexture, chessboardTexture, board, side); // Update display after events
     }
 
-
-    disconnect(*SocketFD);
+    disconnect(*SocketFD); // Disconnect from server
     
     return 0;
 }
 
-
+// Connect to the server and retrieve the player's side
 int connect_to_server(struct sockaddr_in sa, int *SocketFD, char& side){
     
-    int port=1101;
-    *SocketFD = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+    int port = 1101; // Server port number
+    *SocketFD = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP); // Create socket
     if (*SocketFD == -1) {
       perror("Cannot create socket");
       exit(EXIT_FAILURE);
@@ -120,9 +121,8 @@ int connect_to_server(struct sockaddr_in sa, int *SocketFD, char& side){
     
     memset(&sa, 0, sizeof sa);
     
-    sa.sin_addr.s_addr=inet_addr("127.0.0.1");
+    sa.sin_addr.s_addr = inet_addr("127.0.0.1"); // Server address
     sa.sin_family = AF_INET;
-    
     sa.sin_port = htons(port);
 
     if (connect(*SocketFD, (struct sockaddr *)&sa, sizeof sa) == -1) {
@@ -130,26 +130,26 @@ int connect_to_server(struct sockaddr_in sa, int *SocketFD, char& side){
       close(*SocketFD);
       exit(EXIT_FAILURE);
     }
-    else
-    {
+    else {
         printf("Connection accepted \n");
     }
 
-    recv(*SocketFD, &side, sizeof(char), 0);
+    recv(*SocketFD, &side, sizeof(char), 0); // Receive player side from server
     if (side == 'w') {
-        printf("Grasz po stronie białych\n");
+        printf("You play as White!\n");
         return 1;
     } else {
-        printf("Grasz po stronie czarnych\n");
+        printf("You play as Black!\n");
         return 0;
     }
-
 }
 
+// Disconnect from the server
 void disconnect(int &SocketFD){
     close(SocketFD);
 }
 
+// Thread function to handle incoming messages from the server
 void *gameSessionThread(void *arg) {
     int SocketFD = *((int *)(arg));
     int data[128] = {0};

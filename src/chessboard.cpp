@@ -1,48 +1,49 @@
 #include "chessboard.h"
 #include <stdio.h>
 
-// Typ szachownicy
+// Type definition for the chessboard
+// Chessboard is represented as a 2D vector of `Piece` objects.
 using Chessboard = std::vector<std::vector<Piece>>;
 
-bool check(Chessboard& board, char turn, int king_pos[2]);
-bool can_pawn_move(Chessboard &board, const int move[4]);
-bool can_knight_move(const Chessboard &board, const int move[4]);
-bool can_bishop_move(const Chessboard &board, const int move[4]);
-bool can_rook_move(const Chessboard &board, const int move[4]);
-bool can_queen_move(const Chessboard &board, const int move[4]);
-bool can_king_move(const Chessboard &board, const int move[4]);
+// Function declarations for checking moves and game state
+bool check(Chessboard& board, char turn, int king_pos[2]); // Check if the current player's king is in check
+bool can_pawn_move(Chessboard &board, const int move[4]);  // Check if a pawn can legally move
+bool can_knight_move(const Chessboard &board, const int move[4]); // Check if a knight can legally move
+bool can_bishop_move(const Chessboard &board, const int move[4]); // Check if a bishop can legally move
+bool can_rook_move(const Chessboard &board, const int move[4]);   // Check if a rook can legally move
+bool can_queen_move(const Chessboard &board, const int move[4]);  // Check if a queen can legally move
+bool can_king_move(const Chessboard &board, const int move[4]);   // Check if a king can legally move
 
-// Funkcja do inicjalizacji szachownicy
+// Function to initialize the chessboard with pieces in their starting positions
 Chessboard initializeBoard()
 {
-    Chessboard board(8, std::vector<Piece>(8, Piece()));
+    Chessboard board(8, std::vector<Piece>(8, Piece())); // Create an 8x8 chessboard initialized with empty pieces
 
-    // Ustawienie pionków
+    // Set pawns
     for (int i = 0; i < 8; i++)
     {
-        board[1][i] = Piece('p', 'w'); // Pionki białe
-        board[6][i] = Piece('p', 'b'); // Pionki czarne
+        board[1][i] = Piece('p', 'w'); // White pawns
+        board[6][i] = Piece('p', 'b'); // Black pawns
     }
 
-    // Białe figury
-    board[0][0] = board[0][7] = Piece('r', 'w');
-    board[0][1] = board[0][6] = Piece('k', 'w');
-    board[0][2] = board[0][5] = Piece('b', 'w');
-    board[0][3] = Piece('K', 'w');
-    board[0][4] = Piece('q', 'w');
+    // Set white pieces
+    board[0][0] = board[0][7] = Piece('r', 'w'); // Rooks
+    board[0][1] = board[0][6] = Piece('k', 'w'); // Knights
+    board[0][2] = board[0][5] = Piece('b', 'w'); // Bishops
+    board[0][3] = Piece('K', 'w');              // King
+    board[0][4] = Piece('q', 'w');              // Queen
 
-    // Czarne figury
-    board[7][0] = board[7][7] = Piece('r', 'b');
-    board[7][1] = board[7][6] = Piece('k', 'b');
-    board[7][2] = board[7][5] = Piece('b', 'b');
-    board[7][3] = Piece('K', 'b');
-    board[7][4] = Piece('q', 'b');
+    // Set black pieces
+    board[7][0] = board[7][7] = Piece('r', 'b'); // Rooks
+    board[7][1] = board[7][6] = Piece('k', 'b'); // Knights
+    board[7][2] = board[7][5] = Piece('b', 'b'); // Bishops
+    board[7][3] = Piece('K', 'b');              // King
+    board[7][4] = Piece('q', 'b');              // Queen
 
-    return board;
+    return board; // Return the initialized chessboard
 }
 
-// Funkcja serializacji szachownicy
-// Funkcja serializująca szachownicę do tablicy int
+// Function to serialize the chessboard into an array of integers
 void serializeChessboard(const Chessboard &board, int data[128])
 {
     int index = 0;
@@ -51,13 +52,13 @@ void serializeChessboard(const Chessboard &board, int data[128])
         for (int col = 0; col < 8; ++col)
         {
             const Piece &piece = board[row][col];
-            data[index++] = (int)piece.type;  // Serializacja typu figury
-            data[index++] = (int)piece.color; // Serializacja koloru figury
+            data[index++] = (int)piece.type;  // Serialize the type of the piece
+            data[index++] = (int)piece.color; // Serialize the color of the piece
         }
     }
 }
 
-// Funkcja deserializująca tablicę int do szachownicy
+// Function to deserialize an array of integers into a chessboard
 void deserializeChessboard(const int data[128], Chessboard &board)
 {
     int index = 0;
@@ -65,8 +66,8 @@ void deserializeChessboard(const int data[128], Chessboard &board)
     {
         for (int col = 0; col < 8; ++col)
         {
-            board[row][col].type = (char)data[index++];  // Odtworzenie typu figury
-            board[row][col].color = (char)data[index++]; // Odtworzenie koloru figury
+            board[row][col].type = (char)data[index++];  // Reconstruct the type of the piece
+            board[row][col].color = (char)data[index++]; // Reconstruct the color of the piece
         }
     }
 }
