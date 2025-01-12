@@ -291,8 +291,8 @@ void king_position(Chessboard &board, char turn, int king_pos[]){
         {
             if (board[i][j].type == 'K' && board[i][j].color == turn)
             {
-                king_pos[0] = i;
-                king_pos[1] = j;
+                king_pos[0] = j;
+                king_pos[1] = i;
                 return;
             }
         }
@@ -306,7 +306,7 @@ bool check(Chessboard &board, char turn, int king_pos[2]) {
         for (int col = 0; col < 8; col++) {
             if (board[row][col].type != 'e' && board[row][col].color != turn) {
                 // Create a move array representing the potential attack on the king
-                int move[4] = {col, row, king_pos[1], king_pos[0]}; // (x1, y1, x2, y2)
+                int move[4] = {col, row, king_pos[0], king_pos[1]}; // (x1, y1, x2, y2)
 
                 // Check if the piece can move to the king's position
                 bool canAttack = false;
@@ -344,7 +344,7 @@ bool checkmate(Chessboard &board, char turn, int king_pos[]) {
                 for (int x = 0; x < 8; x++) {
                     for (int y = 0; y < 8; y++) {
                         if(i == x && j == y) continue;
-                        int move[4] = {j, i, x, y}; // {startX, startY, targetX, targetY}
+                        int move[4] = {j, i, y, x}; // {startX, startY, targetX, targetY}
                         if (can_move(tempBoard, move, turn)) {
                             // If any legal move is found, it's not checkmate
                             return false;
@@ -371,7 +371,7 @@ bool stalemate(Chessboard &board, char turn, int king_pos[]) {
                 for (int x = 0; x < 8; x++) {
                     for (int y = 0; y < 7; y++) {
                         if(i == x && j == y) continue;
-                        int move[4] = {j, i, x, y}; // {startX, startY, targetX, targetY}
+                        int move[4] = {j, i, y, x}; // {startX, startY, targetX, targetY}
                         if (can_move(tempBoard, move, turn)) {
                             // If any legal move is found, it's not stalemate
                             return false;
@@ -425,7 +425,7 @@ bool can_move(Chessboard &board, int move[4], char turn)
     // Sprawdzenie, czy na pozycji początkowej znajduje się figura
     Piece sourcePiece = board[y1][x1];
     if (sourcePiece.type == 'e')
-    { // Brak figury (zakładamy, że '\0' oznacza puste pole)
+    { 
         return false;
     }
     switch (sourcePiece.type)
@@ -461,10 +461,10 @@ bool can_move(Chessboard &board, int move[4], char turn)
         int king_pos[2] = {0};
         king_position(board, turn, king_pos);
         //Check if the pawn has reached the last row
-        if ((board[y2][x2].type == 'p')&&((board[y2][x2].color == 'w' && y2 == 7) || (board[y2][x2].color == 'b' && y2 == 0))) {
-            // Promote the pawn to a queen
-            board[y2][x2].type='q';
-        }
+        // if ((board[y2][x2].type == 'p')&&((board[y2][x2].color == 'w' && y2 == 7) || (board[y2][x2].color == 'b' && y2 == 0))) {
+        //     // Promote the pawn to a queen
+        //     board[y2][x2].type='q';
+        // }
         if(check(board, turn, king_pos)){
             board[y2][x2] = destinationPiece;
             board[y1][x1] = sourcePiece;
