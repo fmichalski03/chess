@@ -332,14 +332,8 @@ bool check(Chessboard &board, char turn, int king_pos[2]) {
     return false;
 }
 
-bool check_mate(Chessboard &board, char turn) {
-    int king_pos[2];
-    king_position(board, turn, king_pos);
+bool checkmate(Chessboard &board, char turn, int king_pos[]) {
 
-    // Check if the king is in check
-    if (!check(board, turn, king_pos)) {
-        return false; // If the king is not in check, it's not checkmate
-    }
     Chessboard tempBoard = deepCopyBoard(board);
 
     // Iterate through all pieces to see if any can make a legal move
@@ -349,6 +343,7 @@ bool check_mate(Chessboard &board, char turn) {
                 // Try all possible moves for this piece
                 for (int x = 0; x < 8; x++) {
                     for (int y = 0; y < 8; y++) {
+                        if(i == x && j == y) continue;
                         int move[4] = {j, i, x, y}; // {startX, startY, targetX, targetY}
                         if (can_move(tempBoard, move, turn)) {
                             // If any legal move is found, it's not checkmate
@@ -364,14 +359,8 @@ bool check_mate(Chessboard &board, char turn) {
     return true;
 }
 
-bool stale_mate(Chessboard &board, char turn) {
-    int king_pos[2];
-    king_position(board, turn, king_pos);
+bool stalemate(Chessboard &board, char turn, int king_pos[]) {
 
-    // Check if the king is in check
-    if (check(board, turn, king_pos)) {
-        return false; // If the king is in check, it's not a stalemate
-    }
     Chessboard tempBoard = deepCopyBoard(board);
 
     // Iterate through all pieces to see if any can make a legal move
@@ -382,9 +371,9 @@ bool stale_mate(Chessboard &board, char turn) {
                 for (int x = 0; x < 8; x++) {
                     for (int y = 0; y < 7; y++) {
                         if(i == x && j == y) continue;
-                        int move[4] = {i, j, x, y}; // {startX, startY, targetX, targetY}
+                        int move[4] = {j, i, x, y}; // {startX, startY, targetX, targetY}
                         if (can_move(tempBoard, move, turn)) {
-                            // If any legal move is found, it's not checkmate
+                            // If any legal move is found, it's not stalemate
                             return false;
                         }
                     }
@@ -395,6 +384,24 @@ bool stale_mate(Chessboard &board, char turn) {
 
     // If no legal moves are found and the king is not in check, it's a stalemate
     return true;
+}
+
+char gameDecider(Chessboard &board, char turn){
+    int king_pos[2];
+    king_position(board, turn, king_pos);
+
+    // Check if the king is in check
+    if (check(board, turn, king_pos)) { // If the king is in check, it's not a stalemate
+        if (checkmate(board, turn, king_pos)) {
+        return 'c'; 
+        }
+    }
+    else{
+        if (stalemate(board, turn, king_pos)) {
+            return 's';
+            }
+    }
+    return turn;
 }
 
 bool can_move(Chessboard &board, int move[4], char turn)

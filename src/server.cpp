@@ -119,7 +119,7 @@ int main(void) {
 
 void *gameSessionThread(void *arg) {
     // Initialize the chessboard
-    Chessboard board = initializeBoard();
+    Chessboard board = initializeEndgameBoard();
     GameSession *session = (GameSession *)arg;
     int clientSocketWhite = session->clientSocketWhite;
     int clientSocketBlack = session->clientSocketBlack;
@@ -201,12 +201,12 @@ void *gameSessionThread(void *arg) {
                 
                 turn = (turn == 'w') ? 'b' : 'w';
                 // Check for checkmate or stalemate
-                if (check_mate(board, turn)) {
+                char outcome = gameDecider(board, turn);
+                if (outcome == 'c') {
                     printf("Player %c is in checkmate!\n", turn);
-                    turn = 'c';
                     serializeChessboard(board, data);
-                    send(clientSocketWhite, &turn, sizeof(turn), 0);
-                    send(clientSocketBlack, &turn, sizeof(turn), 0);
+                    send(clientSocketWhite, &outcome, sizeof(outcome), 0);
+                    send(clientSocketBlack, &outcome, sizeof(outcome), 0);
                     send(clientSocketWhite, data, 128 * sizeof(int), 0);
                     send(clientSocketBlack, data, 128 * sizeof(int), 0);
                     close(clientSocketWhite);
@@ -214,12 +214,11 @@ void *gameSessionThread(void *arg) {
                     printf("Game session ended.\n");
                     pthread_exit(NULL);
                 } 
-                else if (stale_mate(board, turn)) {
+                else if (outcome == 's') {
                     printf("Player %c is in stalemate!\n", turn);
-                    turn = 's';
                     serializeChessboard(board, data);
-                    send(clientSocketWhite, &turn, sizeof(turn), 0);
-                    send(clientSocketBlack, &turn, sizeof(turn), 0);
+                    send(clientSocketWhite, &outcome, sizeof(outcome), 0);
+                    send(clientSocketBlack, &outcome, sizeof(outcome), 0);
                     send(clientSocketWhite, data, 128 * sizeof(int), 0);
                     send(clientSocketBlack, data, 128 * sizeof(int), 0);
                     close(clientSocketWhite);

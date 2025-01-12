@@ -22,7 +22,7 @@ Chessboard initializeEndgameBoard();
 void serializeChessboard(const Chessboard& board, int data[128]);
 void deserializeChessboard(const int data[128], Chessboard& board);
 bool can_move(Chessboard& board, int move[4], char turn);
-bool check_mate(Chessboard &board, char turn);
-bool stale_mate(Chessboard &board, char turn);
+char gameDecider(Chessboard &board, char turn);
+
 
 #endif // CHESSBOARD_H
