@@ -198,8 +198,8 @@ void *gameSessionThread(void *arg) {
 
             // Validate and process the move
             if (can_move(board, msg, turn)) {
+                
                 turn = (turn == 'w') ? 'b' : 'w';
-
                 // Check for checkmate or stalemate
                 if (check_mate(board, turn)) {
                     printf("Player %c is in checkmate!\n", turn);
@@ -213,7 +213,8 @@ void *gameSessionThread(void *arg) {
                     close(clientSocketBlack);
                     printf("Game session ended.\n");
                     pthread_exit(NULL);
-                } else if (stale_mate(board, turn)) {
+                } 
+                else if (stale_mate(board, turn)) {
                     printf("Player %c is in stalemate!\n", turn);
                     turn = 's';
                     serializeChessboard(board, data);
@@ -228,6 +229,7 @@ void *gameSessionThread(void *arg) {
                 }
 
                 // Notify the other player about the move
+
                 serializeChessboard(board, data);
                 send(clientSocketWhite, &turn, sizeof(turn), 0);
                 send(clientSocketBlack, &turn, sizeof(turn), 0);

@@ -17,6 +17,7 @@ struct Piece {
 
 using Chessboard = std::vector<std::vector<Piece>>;
 Chessboard initializeBoard();
+Chessboard initializeEndgameBoard();
 
 void serializeChessboard(const Chessboard& board, int data[128]);
 void deserializeChessboard(const int data[128], Chessboard& board);

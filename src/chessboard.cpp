@@ -42,6 +42,34 @@ Chessboard initializeBoard()
 
     return board; // Return the initialized chessboard
 }
+Chessboard initializeEndgameBoard()
+{
+    Chessboard board(8, std::vector<Piece>(8, Piece())); // Create an 8x8 chessboard initialized with empty pieces
+
+    // Set white pieces
+    board[0][3] = Piece('K', 'w'); // White king
+    board[0][4] = Piece('q', 'w'); // White queen
+
+    // Set black pieces
+    board[7][3] = Piece('K', 'b'); // Black king
+    board[7][4] = Piece('q', 'b'); // Black queen
+
+    return board; // Return the initialized chessboard
+}
+
+// Function to create a deep copy of the chessboard
+Chessboard deepCopyBoard(const Chessboard &board) {
+    Chessboard newBoard(8, std::vector<Piece>(8, Piece())); // Create an 8x8 chessboard initialized with empty pieces
+
+    // Copy the state of each piece from the original board to the new board
+    for (int row = 0; row < 8; ++row) {
+        for (int col = 0; col < 8; ++col) {
+            newBoard[row][col] = board[row][col]; // Copy the piece at the current position
+        }
+    }
+
+    return newBoard; // Return the deep copy of the chessboard
+}
 
 // Function to serialize the chessboard into an array of integers
 void serializeChessboard(const Chessboard &board, int data[128])
@@ -115,6 +143,8 @@ bool can_bishop_move(const Chessboard &board, const int move[4])
     int y1 = move[1]; // Starting y position
     int x2 = move[2]; // Target x position
     int y2 = move[3]; // Target y position
+
+    if(x1 == x2 && y1 == y2) return false; // Same position, no move
 
     const Piece &bishop = board[y1][x1];
 
@@ -253,7 +283,7 @@ bool can_queen_move(const Chessboard &board, const int move[4])
     return false;
 }
 
-void king_position(Chessboard &board, char turn, int king_pos[2]){
+void king_position(Chessboard &board, char turn, int king_pos[]){
     // Find the king's position
     for (int i = 0; i < 8; i++)
     {
@@ -308,30 +338,21 @@ bool check_mate(Chessboard &board, char turn) {
 
     // Check if the king is in check
     if (!check(board, turn, king_pos)) {
-        return false; // Not in check, so not checkmate
+        return false; // If the king is not in check, it's not checkmate
     }
+    Chessboard tempBoard = deepCopyBoard(board);
 
-    // Iterate through all pieces to see if any can block or capture the attacking piece
+    // Iterate through all pieces to see if any can make a legal move
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
-            if (board[i][j].color == turn) {
+            if (tempBoard[i][j].color == turn) {
                 // Try all possible moves for this piece
                 for (int x = 0; x < 8; x++) {
                     for (int y = 0; y < 8; y++) {
-                        int move[4] = {j, i, y, x}; // {startX, startY, targetX, targetY}
-                        if (can_move(board, move, turn)) {
-                            // Simulate the move
-                            Chessboard tempBoard = board;
-                            Piece destinationPiece = tempBoard[y][x];
-                            tempBoard[y][x] = tempBoard[i][j];
-                            tempBoard[i][j] = Piece();
-
-                            // Check if the king is still in check after the move
-                            int tempKingPos[2];
-                            king_position(tempBoard, turn, tempKingPos);
-                            if (!check(tempBoard, turn, tempKingPos)) {
-                                return false; // Found a move that gets the king out of check
-                            }
+                        int move[4] = {j, i, x, y}; // {startX, startY, targetX, targetY}
+                        if (can_move(tempBoard, move, turn)) {
+                            // If any legal move is found, it's not checkmate
+                            return false;
                         }
                     }
                 }
@@ -339,7 +360,7 @@ bool check_mate(Chessboard &board, char turn) {
         }
     }
 
-    // If no moves can get the king out of check, it's checkmate
+    // If no legal moves are found and the king is in check, it's checkmate
     return true;
 }
 
@@ -351,18 +372,19 @@ bool stale_mate(Chessboard &board, char turn) {
     if (check(board, turn, king_pos)) {
         return false; // If the king is in check, it's not a stalemate
     }
-    Chessboard tempBoard = board;
+    Chessboard tempBoard = deepCopyBoard(board);
 
     // Iterate through all pieces to see if any can make a legal move
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
-            if (board[i][j].color == turn) {
+            if (tempBoard[i][j].color == turn) {
                 // Try all possible moves for this piece
                 for (int x = 0; x < 8; x++) {
-                    for (int y = 0; y < 8; y++) {
-                        int move[4] = {j, i, y, x}; // {startX, startY, targetX, targetY}
+                    for (int y = 0; y < 7; y++) {
+                        if(i == x && j == y) continue;
+                        int move[4] = {i, j, x, y}; // {startX, startY, targetX, targetY}
                         if (can_move(tempBoard, move, turn)) {
-                            // If any legal move is found, it's not a stalemate
+                            // If any legal move is found, it's not checkmate
                             return false;
                         }
                     }
@@ -383,6 +405,10 @@ bool can_move(Chessboard &board, int move[4], char turn)
     int y1 = move[1];
     int x2 = move[2];
     int y2 = move[3];
+
+    if (x1 < 0 || x1 >= 8 || y1 < 0 || y1 >= 8 || x2 < 0 || x2 >= 8 || y2 < 0 || y2 >= 8) {
+        return false; // Target position is out of bounds
+    }
 
     if (board[y1][x1].color != turn)
     {
@@ -427,7 +453,7 @@ bool can_move(Chessboard &board, int move[4], char turn)
         board[y1][x1] = Piece();          // Oczyszczenie pola początkowego (ustawienie na pusty Piece)
         int king_pos[2] = {0};
         king_position(board, turn, king_pos);
-        // Check if the pawn has reached the last row
+        //Check if the pawn has reached the last row
         if ((board[y2][x2].type == 'p')&&((board[y2][x2].color == 'w' && y2 == 7) || (board[y2][x2].color == 'b' && y2 == 0))) {
             // Promote the pawn to a queen
             board[y2][x2].type='q';
