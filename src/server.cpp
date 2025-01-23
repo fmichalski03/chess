@@ -119,7 +119,7 @@ int main(void) {
 
 void *gameSessionThread(void *arg) {
     // Initialize the chessboard
-    Chessboard board = initializeEndgameBoard();
+    Chessboard board = initializeBoard();
     GameSession *session = (GameSession *)arg;
     int clientSocketWhite = session->clientSocketWhite;
     int clientSocketBlack = session->clientSocketBlack;
