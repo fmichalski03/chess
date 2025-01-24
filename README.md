@@ -81,15 +81,15 @@ The server and client executables will be generated in the `build` directory.
 ## Running the Application
 
 ### Start the Server
-From the */build* directory un the server executable to start listening for connections:
+From the *project root* directory un the server executable to start listening for connections:
 ```bash
-./src/server
+./build/src/server
 ```
 
 ### Start the Clients
 Launch two instances of the client executable:
 ```bash
-./src/client
+./build/src/client
 ```
 Both clients will connect to the server and be assigned sides (White or Black).
 
