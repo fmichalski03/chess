@@ -36,7 +36,7 @@ The client allows a player to connect to the server, play chess, and visualize t
 
 #### Key Features
 1. **Connection to Server**:
-   - Establishes a TCP connection with the server on `127.0.0.1:1101`.
+   - Establishes a TCP connection with the server on given adress and port.
    - Receives the assigned side (White or Black).
 2. **Graphical Interface**:
    - Renders the chessboard and pieces.
@@ -89,7 +89,7 @@ From the *project root* directory un the server executable to start listening fo
 ### Start the Clients
 Launch two instances of the client executable:
 ```bash
-./build/src/client
+./build/src/client <ip> <port>
 ```
 Both clients will connect to the server and be assigned sides (White or Black).
 
