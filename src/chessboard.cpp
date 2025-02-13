@@ -48,11 +48,10 @@ Chessboard initializeEndgameBoard()
 
     // Set white pieces
     board[0][3] = Piece('K', 'w'); // White king
-    board[0][4] = Piece('q', 'w'); // White queen
 
     // Set black pieces
-    board[7][3] = Piece('K', 'b'); // Black king
-    board[7][4] = Piece('q', 'b'); // Black queen
+    board[2][3] = Piece('K', 'b'); // Black king
+    board[1][3] = Piece('q', 'b'); // Black queen
 
     return board; // Return the initialized chessboard
 }

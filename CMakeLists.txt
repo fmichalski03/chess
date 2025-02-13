@@ -16,3 +16,9 @@ add_subdirectory(src)
 
 
 set(RESOURCES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/resources)
+
+find_package(GTest REQUIRED)
+include_directories(${GTEST_INCLUDE_DIRS})
+
+add_executable(test_chessboard src/chessboard.cpp tests/test_chessboard.cpp)
+target_link_libraries(test_chessboard GTest::GTest GTest::Main pthread)
